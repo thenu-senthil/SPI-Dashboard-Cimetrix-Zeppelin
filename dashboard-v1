@@ -1,0 +1,126 @@
+# this dashboard will appear in the bottom?
+  # Install required libraries
+!pip install plotly dash pandas seaborn
+
+# Import necessary libraries
+import plotly.express as px
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+import seaborn as sns
+import pandas as pd
+
+# Read data from the CSV file
+df = pd.read_csv("KYData.csv")
+
+# Colors for 'Result' categories
+colors = {'sufficient': 'green', 'w insufficient': 'orange', 'e insufficient': 'red'}
+
+# Initialize Dash app
+app = dash.Dash(__name__)
+
+# Define the layout of the dashboard
+app.layout = html.Div(children=[
+    html.H1(children='Interactive Dashboard'),
+
+    html.Div(className='row', children=[
+        html.Div(className='six columns', children=[
+            dcc.Graph(
+                id='heatmap',
+                figure=px.scatter(df, x='PosX(mm)', y='PosY(mm)', color='Result', symbol='Result', size_max=40, 
+                                   color_discrete_map={'sufficient': 'green', 'w insufficient': 'orange', 'e insufficient': 'red'})
+            ),
+        ]),
+
+        html.Div(className='six columns', children=[
+            html.Div([
+                html.H4(children='Details'),
+                html.Div(id='selected-point-info', style={'backgroundColor': 'white', 'padding': '10px', 'border-radius': '5px'}),
+            ]),
+            
+            html.Div([
+                dcc.Graph(id='volume-histogram'),
+            ]),
+            
+            html.Div([
+                dcc.Graph(id='area-ratio-box-plot'),
+            ]),
+            
+            html.Div([
+                dcc.Graph(id='offset-scatter-plot'),
+            ]),
+        ]),
+    ]),
+])
+
+# Define callback to update the side visuals when a point is hovered
+@app.callback(
+    [Output('selected-point-info', 'children'),
+     Output('volume-histogram', 'figure'),
+     Output('area-ratio-box-plot', 'figure'),
+     Output('offset-scatter-plot', 'figure')],
+    [Input('heatmap', 'hoverData')]
+)
+def update_side_visuals(hover_data):
+    if hover_data is None:
+        return '', {}, {}, {}
+
+    selected_point = df[(df['PosX(mm)'] == hover_data['points'][0]['x']) & (df['PosY(mm)'] == hover_data['points'][0]['y'])].iloc[0]
+
+    selected_point_info = html.Div([
+        html.Strong('Company Name:'), f' {selected_point["Company Name"]}',
+        html.Br(),
+        html.Strong('Board ID:'), f' {selected_point["Board ID"]}',
+        html.Br(),
+        html.Strong('Date:'), f' {selected_point["Date"]}',
+        html.Br(),
+        html.Strong('Time Run:'), f' {selected_point["Time Run"]}',
+        html.Br(),
+        html.Strong('Total Pads #:'), f' {selected_point["Volume(%)"]}',
+        html.Br(),
+        html.Strong('Components List:'), f' {[component.strip() for component in selected_point["Components List"].split(",")]}',
+        html.Br(),
+        html.Strong('Failure Rate:'), f' {selected_point["Failure Rate"]}',
+    ], style={'whiteSpace': 'pre-line'})
+
+    volume_histogram = px.histogram(df, x='Volume(%)', title='Volume % Distribution')
+    volume_histogram.add_shape(
+        type='line',
+        x0=selected_point['Volume(%)'],
+        x1=selected_point['Volume(%)'],
+        y0=0,
+        y1=1,
+        xref='x',
+        yref='paper',
+        line=dict(color='blue', width=2)
+    )
+
+    area_ratio_box_plot = px.box(df, x='Area(%)', title='Area Ratio Box Plot')
+    area_ratio_box_plot.add_shape(
+        type='line',
+        x0=0,
+        x1=1,
+        y0=selected_point['Area(%)'],
+        y1=selected_point['Area(%)'],
+        xref='paper',
+        yref='y',
+        line=dict(color='blue', width=2)
+    )
+
+    offset_scatter_plot = px.scatter(df, x='OffsetX(%)', y='OffsetY(%)', title='Offset Scatter Plot', marginal_x='histogram', marginal_y='histogram')
+    offset_scatter_plot.add_shape(
+        type='circle',
+        x0=selected_point['OffsetX(%)'] - 1,
+        x1=selected_point['OffsetX(%)'] + 1,
+        y0=selected_point['OffsetY(%)'] - 1,
+        y1=selected_point['OffsetY(%)'] + 1,
+        xref='x',
+        yref='y',
+        line=dict(color='blue', width=2)
+    )
+
+    return selected_point_info, volume_histogram, area_ratio_box_plot, offset_scatter_plot
+
+# Run the app
+app.run_server(mode="inline")
