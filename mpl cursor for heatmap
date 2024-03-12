@@ -1,0 +1,36 @@
+!pip install mplcursors
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import mplcursors
+
+# Load data from CSV
+df = pd.read_csv('KYData.csv')
+
+# Visualization for Height(um) vs. PosY(mm)
+plt.figure(figsize=(90, 60))
+
+# Define colors for each category
+colors = {'sufficient': 'green', 'w insufficient': 'orange', 'e insufficient': 'red'}
+
+scatter = sns.scatterplot(x='PosX(mm)', y='PosY(mm)', hue='Result', style='Result', data=df, s=100, palette=colors.values())
+
+plt.title('Scatter Plot of PosX vs. PosY with Result', fontsize=30)
+plt.xlabel('PosX(mm)', fontsize=20)
+plt.ylabel('PosY(mm)', fontsize=20)
+
+# Adjusting legend parameters
+legend = plt.legend(title='Result', loc='upper right', fontsize=25, title_fontsize=30)
+legend.get_title().set_fontsize(30)  # Adjusting title font size
+legend.get_frame().set_linewidth(2)  # Increasing legend box border width
+legend.get_frame().set_edgecolor('black')  # Setting legend box color
+
+# Manually setting legend item colors
+for text, color in zip(legend.get_texts(), colors.values()):
+    text.set_color(color)
+
+# Add tooltips
+mplcursors.cursor(scatter, hover=True).connect("add", lambda sel: sel.annotation.set_text(f"X: {sel.target[0]}, Y: {sel.target[1]}, Component: {df.iloc[sel.target.index]['Component ID']}"))
+
+plt.show()
