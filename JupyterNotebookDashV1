@@ -1,0 +1,102 @@
+import pandas as pd
+import plotly.graph_objects as go
+import dash
+from dash import dcc, html, Input, Output
+
+df = pd.read_csv("KYData.csv")
+## make sure that your csv file is named the same
+
+# Initialize your Dash app
+app = dash.Dash(__name__)
+## i am not sure how this works, but dash isn't usable on zeppelin anyway
+
+# Define the layout of your dashboard
+app.layout = html.Div([
+    html.H1("Thenu's SPI Dashboard", style={'textAlign': 'center'}),
+
+    # Left Section
+    html.Div([
+        html.H4("Left Section", style={'textAlign': 'center'}),
+        html.Div([
+            html.Label("Company Name"),
+            dcc.Input(id='company-name', type='text', value='Your Company')
+        ]),
+        html.Div([
+            html.Label("Board ID"),
+            dcc.Input(id='board-id', type='text', value='Board ID')
+        ]),
+        html.Div([
+            html.Label("Date"),
+            dcc.Input(id='date', type='text', value='Date')
+        ]),
+        html.Div([
+            html.Label("Time Run"),
+            dcc.Input(id='time-run', type='text', value='Time Run')
+        ]),
+        html.Div([
+            html.Label("Total Pads #"),
+            dcc.Input(id='total-pads', type='number', value=len(df))
+        ]),
+        html.Div([
+            html.Label("Components List"),
+            dcc.Input(id='components-list', type='text', value=', '.join(df['Component ID'].unique()))
+        ]),
+        html.Div([
+            html.Label("Failure Rate"),
+            dcc.Input(id='failure-rate', type='number', value=df['Result'].value_counts(normalize=True).get('Fail', 0.0) * 100)
+        ])
+    ], style={'border': '2px solid black', 'margin': '10px', 'padding': '10px'}),
+
+    # Middle Section
+    html.Div([
+        html.H4("Middle Section", style={'textAlign': 'center'}),
+        dcc.Graph(id='solder-points')
+    ], style={'border': '2px solid black', 'margin': '10px', 'padding': '10px'}),
+
+    # Right Section
+    html.Div([
+        html.H4("Right Section", style={'textAlign': 'center'}),
+        # Visualization 1: Histogram
+        dcc.Graph(id='histogram'),
+        # Visualization 2: Heatmap
+        dcc.Graph(id='heatmap'),
+        # Visualization 3: Scatter Plot
+        dcc.Graph(id='scatter-plot')
+    ], style={'border': '2px solid black', 'margin': '10px', 'padding': '10px', 'display': 'inline-block', 'width': '30%'})
+])
+
+
+# Callback to update the scatter plot based on user input
+@app.callback(
+    Output('solder-points', 'figure'),
+    [Input('total-pads', 'value'),
+     Input('components-list', 'value')]
+)
+def update_scatter_plot(total_pads, components_list):
+    fig = go.Figure()
+
+    # Sample code for scatter plot (replace with your actual data)
+    fig.add_trace(go.Scatter(
+        x=df['OffsetX(mm)'],
+        y=df['OffsetY(mm)'],
+        mode='markers',
+        marker=dict(
+            color=df['Result'].map({'Pass': 'blue', 'Fail': 'red'}),
+            size=8
+        ),
+        text=df['Result'],
+        name='Solder Points'
+    ))
+
+    fig.update_layout(
+        title='Solder Points',
+        xaxis_title='Offset X (mm)',
+        yaxis_title='Offset Y (mm)',
+        showlegend=True
+    )
+
+    return fig
+
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)
