@@ -1,0 +1,24 @@
+from bokeh.plotting import figure, show
+from bokeh.models import ColumnDataSource
+import pandas as pd
+
+# Read the CSV file
+df = pd.read_csv("KYData.csv")
+
+# Create a Bokeh figure
+TOOLS = "hover,pan,wheel_zoom,box_zoom,reset,save"
+p = figure(title="Component Scatter Plot", tools=TOOLS)
+
+# Create ColumnDataSource for the entire dataset
+source = ColumnDataSource(df)
+
+# Add scatter glyphs to the figure for each result type
+p.circle(x='PosX(mm)', y='PosY(mm)', source=source, size=10, legend_label='W.Insuffi.', color='red', alpha=0.5, line_color=None, muted_alpha=0.2)
+p.circle(x='PosX(mm)', y='PosY(mm)', source=source, size=10, legend_label='GOOD', color='green', alpha=0.5, line_color=None, muted_alpha=0.2)
+p.circle(x='PosX(mm)', y='PosY(mm)', source=source, size=10, legend_label='E.Insuffi.', color='blue', alpha=0.5, line_color=None, muted_alpha=0.2)
+
+# Add legend
+p.legend.click_policy="mute"
+
+# Show the plot
+show(p)
