@@ -1,0 +1,19 @@
+from bokeh.plotting import figure, show
+from bokeh.models import NumeralTickFormatter
+import pandas as pd
+
+# Read the CSV file
+df = pd.read_csv("KYData.csv")
+
+# Create a Bokeh figure
+p = figure(title="Volume Percentage Histogram", x_axis_label="Volume(%)", y_axis_label="Frequency")
+
+# Create a histogram of the Volume(%) column
+hist, edges = pd.cut(df['Volume(%)'], bins=20, retbins=True)
+p.quad(top=hist.value_counts(sort=False), bottom=0, left=edges[:-1], right=edges[1:], fill_color="navy", line_color="white", alpha=0.5)
+
+# Add number formatter to y-axis
+p.yaxis.formatter = NumeralTickFormatter(format='0,0')
+
+# Show the plot
+show(p)
