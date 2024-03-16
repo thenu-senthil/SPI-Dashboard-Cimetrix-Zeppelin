@@ -1,0 +1,80 @@
+from elasticsearch import Elasticsearch
+import pandas as pd
+from bokeh.plotting import figure, show
+
+# Elasticsearch query
+es = Elasticsearch(['http://elasticsearch-master-headless.elastic.svc.cluster.local:9200'], bearer_auth=('elastic_admin', 'C!m3tR1x5@'))
+resp = es.search(index="kohyoung_continuousline1_bluesky_f8a9643b-5939-44d6-bd1b-16d92a0c6fed-000005", query={'match_all': {}}, sort={'equipmentTimeStamp': 'desc'}, size=100)
+elastic_docs = resp["hits"]["hits"]
+fields = {}
+for num, doc in enumerate(elastic_docs):
+    source_data = doc["_source"]
+    for key, val in source_data.items():
+        try:
+            fields[key] = np.append(fields[key], val)
+        except KeyError:
+            fields[key] = np.array([val])
+elastic_df = pd.DataFrame.from_dict(fields, orient='index').transpose().sort_values(by='equipmentTimeStamp', ascending=False)
+
+# Filter the data for each result type
+counts_w_insuffi = elastic_df[elastic_df['parameter_60007_result'] == 'W.Insuffi.'].shape[0]
+counts_good = elastic_df[elastic_df['parameter_60007_result'] == 'GOOD'].shape[0]
+counts_e_insuffi = elastic_df[elastic_df['parameter_60007_result'] == 'E.Insuffi.'].shape[0]
+
+fruits = ['Result']
+years = ["W.Insuffi.", "GOOD", "E.Insuffi."]
+colors = ["red", "green", "blue"]  # Colors for each result type
+
+data = {'fruits': fruits,
+        'W.Insuffi.': [counts_w_insuffi],
+        'GOOD': [counts_good],
+        'E.Insuffi.': [counts_e_insuffi]}
+
+p = figure(y_range=fruits, width=300, title="Volume Percentage by Result",
+           toolbar_location=None, tools="hover", tooltips="$name @fruits: @$name")
+
+p.hbar_stack(years, y='fruits', height=0.9, color=colors, source=data,
+             legend_label=years)
+
+p.ygrid.grid_line_color = None
+p.xaxis.axis_label = "Volume Percentage (%)"
+p.yaxis.axis_label = "Result"
+p.outline_line_color = None
+p.legend.orientation = "horizontal"
+
+show(p)
+
+
+
+####################
+
+This is the error we received on the server:
+# pass fail error, what does it mean?
+
+org.apache.zeppelin.interpreter.InterpreterException: java.io.IOException: Fail to detect scala version, the reason is:Cannot run program "null/bin/spark-submit": error=2, No such file or directory
+	at org.apache.zeppelin.interpreter.remote.RemoteInterpreter.open(RemoteInterpreter.java:129)
+	at org.apache.zeppelin.interpreter.remote.RemoteInterpreter.getFormType(RemoteInterpreter.java:271)
+	at org.apache.zeppelin.notebook.Paragraph.jobRun(Paragraph.java:438)
+	at org.apache.zeppelin.notebook.Paragraph.jobRun(Paragraph.java:69)
+	at org.apache.zeppelin.scheduler.Job.run(Job.java:172)
+	at org.apache.zeppelin.scheduler.AbstractScheduler.runJob(AbstractScheduler.java:132)
+	at org.apache.zeppelin.scheduler.RemoteScheduler$JobRunner.run(RemoteScheduler.java:182)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+	at java.lang.Thread.run(Thread.java:748)
+Caused by: java.io.IOException: Fail to detect scala version, the reason is:Cannot run program "null/bin/spark-submit": error=2, No such file or directory
+	at org.apache.zeppelin.interpreter.launcher.SparkInterpreterLauncher.buildEnvFromProperties(SparkInterpreterLauncher.java:127)
+	at org.apache.zeppelin.interpreter.launcher.StandardInterpreterLauncher.launchDirectly(StandardInterpreterLauncher.java:77)
+	at org.apache.zeppelin.interpreter.launcher.InterpreterLauncher.launch(InterpreterLauncher.java:110)
+	at org.apache.zeppelin.interpreter.InterpreterSetting.createInterpreterProcess(InterpreterSetting.java:856)
+	at org.apache.zeppelin.interpreter.ManagedInterpreterGroup.getOrCreateInterpreterProcess(ManagedInterpreterGroup.java:66)
+	at org.apache.zeppelin.interpreter.remote.RemoteInterpreter.getOrCreateInterpreterProcess(RemoteInterpreter.java:104)
+	at org.apache.zeppelin.interpreter.remote.RemoteInterpreter.internal_create(RemoteInterpreter.java:154)
+	at org.apache.zeppelin.interpreter.remote.RemoteInterpreter.open(RemoteInterpreter.java:126)
+	... 13 more
+ERROR
+Took 0 sec. Last updated by anonymous at March 16 2024, 1:52:17 AM.
